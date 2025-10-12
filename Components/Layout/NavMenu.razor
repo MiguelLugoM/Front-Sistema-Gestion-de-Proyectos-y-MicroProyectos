@@ -1,0 +1,88 @@
+﻿@* 
+    NavMenu.razor
+    Este componente define el menú lateral de navegación de la aplicación.
+    Aquí se colocan los enlaces a las distintas páginas (componentes .razor).
+    Por defecto la plantilla incluye: Home, Counter y Weather.
+    Se ha eliminado Weather porque era un ejemplo de la plantilla.
+    Más adelante aquí se agregará el acceso a la página de Productos.
+*@
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand lh-1" href="#">
+        Sistema de Gestión
+        <span class="d-block fs-6">Proyectos y MicroProyectos</span>
+        </a>
+        <button title="Toggle navigation" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        @* Enlace a la página Home (Index) *@
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="usuario">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Usuario
+            </NavLink>
+        </div>
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tipoResponsable">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Tipo de Responsable
+            </NavLink>
+        </div>
+
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tipoProyecto">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Tipo de Proyecto
+            </NavLink>
+        </div>
+
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="estado">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Estado
+            </NavLink>
+        </div>
+
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tipoProducto">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Tipo de Producto
+            </NavLink>
+        </div>
+
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="entregable">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Entregable
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="variableEstrategica">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Variable Estrategica
+            </NavLink>
+        </div>
+
+    </nav>
+</div>
+
+@code {
+    private bool colapsado = true;
+    private string? NavMenuCssClass => colapsado ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        colapsado = !colapsado;
+    }
+}

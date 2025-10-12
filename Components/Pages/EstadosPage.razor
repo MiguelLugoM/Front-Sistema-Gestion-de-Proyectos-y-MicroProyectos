@@ -1,0 +1,444 @@
+@page "/estado"
+
+@using System.Net.Http.Json
+@using FrontendBlazorApi.Models
+@inject IHttpClientFactory fabricaHttp
+@rendermode InteractiveServer
+
+<PageTitle>Estados</PageTitle>
+
+<h3>Gestión de Estados</h3>
+
+<div class="mb-3 d-flex gap-2">
+    <button type="button" class="btn btn-outline-secondary" @onclick="ProbarConexion">Probar conexión</button>
+    <button type="button" class="btn btn-outline-primary" @onclick="CargarEstados">Mostrar todos</button>
+    <button type="button" class="btn btn-outline-dark" @onclick="LimpiarFormulario">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="@claseAviso" role="alert">@mensaje</div>
+}
+
+@* ------------------ BARRA DE BÚSQUEDA INDEPENDIENTE ------------------ *@
+<h5 class="mt-2">Buscar</h5>
+<div class="row g-2 align-items-end mb-3">
+    <div class="col-md-2">
+        <label class="form-label">Id</label>
+        <InputNumber class="form-control" @bind-Value="idBusqueda" />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Nombre</label>
+        <InputText class="form-control" @bind-Value="nombreBusqueda" />
+    </div>
+    <div class="col-md-6 d-flex gap-2">
+        <button type="button" class="btn btn-secondary" @onclick="BuscarPorId">Buscar por Id</button>
+        <button type="button" class="btn btn-secondary" @onclick="BuscarPorNombre">Buscar por Nombre</button>
+    </div>
+</div>
+
+@* ------------------------ FORMULARIO CREAR/EDITAR --------------------- *@
+<h4>Formulario de Estado</h4>
+
+<EditForm Model="estadoActual" OnValidSubmit="CrearEstado" FormName="EstadoForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3">
+        <div class="col-md-2">
+            <label class="form-label">Id</label>
+            <!-- Deshabilitado cuando NO estás editando -->
+            <InputNumber class="form-control" @bind-Value="estadoActual.Id" disabled />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Nombre</label>
+            <InputText class="form-control" @bind-Value="estadoActual.Nombre" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Descripción</label>
+            <InputText class="form-control" @bind-Value="estadoActual.Descripcion" />
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex flex-wrap gap-2">
+        <!-- Botón SIEMPRE crea -->
+        <button type="submit" class="btn btn-primary">Crear</button>
+
+        <button type="button" class="btn btn-warning" @onclick="ActualizarEstado" disabled="@(!existeEstado)">Actualizar</button>
+        <button type="button" class="btn btn-danger" @onclick="EliminarEstado" disabled="@(!existeEstado)">Eliminar</button>
+    </div>
+</EditForm>
+
+<hr />
+
+@* ------------------------------ LISTADO ------------------------------ *@
+@if (cargando)
+{
+    <p><em>Cargando estados...</em></p>
+}
+else if (listaEstados.Count == 0)
+{
+    <p>No hay estados disponibles.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in listaEstados)
+            {
+                <tr>
+                    <td>@e.Id</td>
+                    <td>@e.Nombre</td>
+                    <td>@e.Descripcion</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                @onclick="@(() => CargarEnFormulario(e))">
+                            Cargar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // -------------------- Estado del componente --------------------
+    private List<Estado> listaEstados = new();
+
+    [SupplyParameterFromForm]
+    private Estado estadoActual { get; set; } = new();
+
+    private bool existeEstado = false;   // habilita Actualizar/Eliminar
+    private string mensaje = "";
+    private string claseAviso = "alert alert-info";
+    private bool cargando = false;
+
+    // Campos de búsqueda separados del formulario
+    private int? idBusqueda;
+    private string nombreBusqueda = "";
+
+    // Ajusta a la ruta real de tu backend
+    private const string urlBaseApi = "api/estado";
+
+    // -------------------- Ciclo de vida --------------------
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarEstados();
+    }
+
+    // -------------------- CRUDL --------------------
+    private async Task CargarEstados()
+    {
+        try
+        {
+            cargando = true;
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+            var respuesta = await cliente.GetFromJsonAsync<RespuestaApiEstados<List<Estado>>>(urlBaseApi);
+            listaEstados = respuesta?.Datos ?? new List<Estado>();
+            mensaje = $"Se cargaron {listaEstados.Count} estado(s).";
+            claseAviso = "alert alert-success";
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error al listar estados: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task BuscarPorId()
+    {
+        LimpiarMensajes();
+
+        if (idBusqueda is null || idBusqueda <= 0)
+        {
+            mensaje = "Debe indicar un Id válido para buscar.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+
+        try
+        {
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+            var ruta = $"{urlBaseApi}/id/{idBusqueda}";
+            var respuesta = await cliente.GetFromJsonAsync<RespuestaApiEstados<List<Estado>>>(ruta);
+            var encontrado = respuesta?.Datos?.FirstOrDefault();
+
+            if (encontrado is not null)
+            {
+                estadoActual = new Estado
+                {
+                    Id = encontrado.Id,
+                    Nombre = encontrado.Nombre,
+                    Descripcion = encontrado.Descripcion
+                };
+
+                existeEstado = true; // habilita Actualizar/Eliminar
+                mensaje = "Estado cargado. Usa el botón 'Actualizar' para guardar cambios.";
+                claseAviso = "alert alert-info";
+            }
+            else
+            {
+                existeEstado = false;
+                mensaje = "Estado no encontrado.";
+                claseAviso = "alert alert-warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            existeEstado = false;
+            mensaje = $"Error al buscar estado: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+        finally
+        {
+            // Limpia SIEMPRE los campos de búsqueda
+            idBusqueda = null;
+            nombreBusqueda = "";
+        }
+    }
+
+    private async Task BuscarPorNombre()
+    {
+        LimpiarMensajes();
+
+        if (string.IsNullOrWhiteSpace(nombreBusqueda))
+        {
+            mensaje = "Debe indicar el Nombre para buscar.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+
+        try
+        {
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+            var ruta = $"{urlBaseApi}/nombre/{nombreBusqueda}";
+            var respuesta = await cliente.GetFromJsonAsync<RespuestaApiEstados<List<Estado>>>(ruta);
+            var encontrado = respuesta?.Datos?.FirstOrDefault();
+
+            if (encontrado is not null)
+            {
+                estadoActual = new Estado
+                {
+                    Id = encontrado.Id,
+                    Nombre = encontrado.Nombre,
+                    Descripcion = encontrado.Descripcion
+                };
+
+                existeEstado = true;
+                mensaje = "Estado cargado. Usa el botón 'Actualizar' para guardar cambios.";
+                claseAviso = "alert alert-info";
+            }
+            else
+            {
+                existeEstado = false;
+                mensaje = "Estado no encontrado.";
+                claseAviso = "alert alert-warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            existeEstado = false;
+            mensaje = $"Error al buscar estado: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+        finally
+        {
+            // Limpia SIEMPRE los campos de búsqueda
+            idBusqueda = null;
+            nombreBusqueda = "";
+        }
+    }
+
+    private async Task CrearEstado()
+    {
+        LimpiarMensajes();
+
+        try
+        {
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+
+            // No enviar Id (IDENTITY)
+            estadoActual.Id = 0;
+
+            var respuesta = await cliente.PostAsJsonAsync(urlBaseApi, estadoActual);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Estado creado correctamente.";
+                claseAviso = "alert alert-success";
+                await CargarEstados();
+                LimpiarFormulario();
+            }
+            else
+            {
+                var detalle = await respuesta.Content.ReadAsStringAsync();
+                mensaje = $"No se pudo crear el estado. Detalle: {detalle}";
+                claseAviso = "alert alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error al crear estado: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+private async Task ActualizarEstado()
+{
+    LimpiarMensajes();
+
+    if (estadoActual.Id <= 0)
+    {
+        mensaje = "Debe indicar un Id válido para actualizar.";
+        claseAviso = "alert alert-warning";
+        return;
+    }
+
+    try
+    {
+        var cliente = fabricaHttp.CreateClient("ApiProductos");
+
+        // No enviar Id en el body
+        var dto = new { nombre = estadoActual.Nombre, descripcion = estadoActual.Descripcion };
+        var ruta = $"{urlBaseApi}/id/{estadoActual.Id}";
+        var respuesta = await cliente.PutAsJsonAsync(ruta, dto);
+
+        if (respuesta.IsSuccessStatusCode)
+        {
+            mensaje = "Estado actualizado correctamente.";
+            claseAviso = "alert alert-success";
+
+            await CargarEstados();
+
+            // 🔽 Limpia el formulario de edición (Id=0, Nombre/Desc vacíos y deshabilita Actualizar)
+            estadoActual = new Estado(); // Id=0 por el JsonIgnore default; Nombre/Desc = ""
+            existeEstado = false;
+        }
+        else
+        {
+            var detalle = await respuesta.Content.ReadAsStringAsync();
+            mensaje = $"No se pudo actualizar el estado. Detalle: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+    catch (Exception ex)
+    {
+        mensaje = $"Error al actualizar estado: {ex.Message}";
+        claseAviso = "alert alert-danger";
+    }
+}
+
+
+    private async Task EliminarEstado()
+    {
+        LimpiarMensajes();
+
+        if (estadoActual.Id <= 0)
+        {
+            mensaje = "Debe indicar un Id válido para eliminar.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+
+        try
+        {
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+            var ruta = $"{urlBaseApi}/id/{estadoActual.Id}";
+            var respuesta = await cliente.DeleteAsync(ruta);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Estado eliminado correctamente.";
+                claseAviso = "alert alert-success";
+                await CargarEstados();
+                LimpiarFormulario();
+            }
+            else
+            {
+                var detalle = await respuesta.Content.ReadAsStringAsync();
+                mensaje = $"No se pudo eliminar el estado. Detalle: {detalle}";
+                claseAviso = "alert alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error al eliminar estado: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private void CargarEnFormulario(Estado e)
+    {
+        estadoActual = new Estado
+        {
+            Id = e.Id,
+            Nombre = e.Nombre,
+            Descripcion = e.Descripcion
+        };
+
+        existeEstado = true; // habilita Actualizar/Eliminar
+        mensaje = "Estado seleccionado desde el listado.";
+        claseAviso = "alert alert-info";
+    }
+
+    // -------------------- Utilitarios --------------------
+    private void LimpiarMensajes()
+    {
+        mensaje = "";
+        claseAviso = "alert alert-info";
+    }
+
+    private void LimpiarFormulario()
+    {
+        estadoActual = new Estado();
+        existeEstado = false;
+
+        // Limpia también la barra de búsqueda
+        idBusqueda = null;
+        nombreBusqueda = "";
+
+        LimpiarMensajes();
+    }
+
+    private async Task ProbarConexion()
+    {
+        LimpiarMensajes();
+
+        try
+        {
+            var cliente = fabricaHttp.CreateClient("ApiProductos");
+            var respuesta = await cliente.GetAsync(urlBaseApi);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                mensaje = "Conexión con la API verificada.";
+                claseAviso = "alert alert-success";
+            }
+            else
+            {
+                mensaje = $"La API respondió con estado {(int)respuesta.StatusCode}.";
+                claseAviso = "alert alert-warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error de conexión a la API: {ex.Message}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+}
