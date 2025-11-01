@@ -13,6 +13,7 @@ C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de ge
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\FrontendBlazorApi.AssemblyInfo.cs
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\FrontendBlazorApi.csproj.CoreCompileInputs.cache
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\FrontendBlazorApi.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\FrontendBlazorApi.sourcelink.json
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\mlugo\Desktop\ML-Universidad\Aplicaciones y Servicios WEB\Sistema de gestion de Proyectos y Microproyectos\FrontendBlazorApi\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json

@@ -63,7 +63,6 @@
     </div>
 
     <div class="mt-3 d-flex flex-wrap gap-2">
-        <!-- Botón SIEMPRE crea -->
         <button type="submit" class="btn btn-primary">Crear</button>
 
         <button type="button" class="btn btn-warning" @onclick="ActualizarEstado" disabled="@(!existeEstado)">Actualizar</button>
@@ -128,7 +127,6 @@ else
     private int? idBusqueda;
     private string nombreBusqueda = "";
 
-    // Ajusta a la ruta real de tu backend
     private const string urlBaseApi = "api/estado";
 
     // -------------------- Ciclo de vida --------------------
@@ -137,7 +135,7 @@ else
         await CargarEstados();
     }
 
-    // -------------------- CRUDL --------------------
+    // -------------------- CRUD --------------------
     private async Task CargarEstados()
     {
         try
@@ -272,7 +270,6 @@ else
         {
             var cliente = fabricaHttp.CreateClient("ApiProductos");
 
-            // No enviar Id (IDENTITY)
             estadoActual.Id = 0;
 
             var respuesta = await cliente.PostAsJsonAsync(urlBaseApi, estadoActual);
@@ -313,7 +310,6 @@ private async Task ActualizarEstado()
     {
         var cliente = fabricaHttp.CreateClient("ApiProductos");
 
-        // No enviar Id en el body
         var dto = new { nombre = estadoActual.Nombre, descripcion = estadoActual.Descripcion };
         var ruta = $"{urlBaseApi}/id/{estadoActual.Id}";
         var respuesta = await cliente.PutAsJsonAsync(ruta, dto);
@@ -325,8 +321,8 @@ private async Task ActualizarEstado()
 
             await CargarEstados();
 
-            // 🔽 Limpia el formulario de edición (Id=0, Nombre/Desc vacíos y deshabilita Actualizar)
-            estadoActual = new Estado(); // Id=0 por el JsonIgnore default; Nombre/Desc = ""
+            // Limpia el formulario de edición 
+            estadoActual = new Estado(); 
             existeEstado = false;
         }
         else

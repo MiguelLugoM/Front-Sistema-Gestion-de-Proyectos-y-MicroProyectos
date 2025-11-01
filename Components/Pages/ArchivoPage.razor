@@ -1,0 +1,266 @@
+@page "/archivo"
+
+@using System.Net.Http.Json
+@using FrontendBlazorApi.Models
+@inject IHttpClientFactory fabricaHttp
+@rendermode InteractiveServer
+
+<PageTitle>Archivos</PageTitle>
+
+<h3>Gestión de Archivos</h3>
+
+<div class="mb-3 d-flex gap-2">
+    <button class="btn btn-outline-secondary" @onclick="ProbarConexion">Probar conexión</button>
+    <button class="btn btn-outline-primary" @onclick="CargarItems">Mostrar todos</button>
+    <button class="btn btn-outline-dark" @onclick="LimpiarFormulario">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="@claseAviso" role="alert">@mensaje</div>
+}
+
+<EditForm Model="itemActual" OnValidSubmit="CrearOActualizar">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3">
+        <div class="col-md-2">
+            <label>Id</label>
+            <InputNumber class="form-control" @bind-Value="itemActual.Id" disabled />
+        </div>
+
+        <div class="col-md-4">
+            <label>Usuario</label>
+            <select class="form-select" @bind="itemActual.IdUsuario">
+                <option value="">Seleccione...</option>
+                @foreach (var u in usuarios)
+                {
+                    <option value="@u.Id">@u.Email</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label>Ruta</label>
+            <InputText class="form-control" @bind-Value="itemActual.Ruta" />
+        </div>
+
+        <div class="col-md-6">
+            <label>Nombre</label>
+            <InputText class="form-control" @bind-Value="itemActual.Nombre" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Tipo</label>
+            <InputText class="form-control" @bind-Value="itemActual.Tipo" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Fecha</label>
+            <InputDate class="form-control" @bind-Value="itemActual.Fecha" />
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            @(existeItem ? "Actualizar" : "Crear")
+        </button>
+        <button class="btn btn-danger" @onclick="EliminarItem" disabled="@(!existeItem)">Eliminar</button>
+    </div>
+</EditForm>
+
+<hr />
+
+@if (lista.Count == 0)
+{
+    <p>No hay archivos registrados.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Ruta</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var it in lista)
+            {
+                <tr>
+                    <td>@it.Id</td>
+                    <td>@usuarios.FirstOrDefault(u => u.Id == it.IdUsuario)?.Email</td>
+                    <td>@it.Nombre</td>
+                    <td>@it.Ruta</td>
+                    <td>@it.Tipo</td>
+                    <td>@FormatearFecha(it.Fecha)</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary"
+                                @onclick="() => CargarEnFormulario(it)">
+                            Cargar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Archivo> lista = new();
+    private List<Usuario> usuarios = new();
+    private Archivo itemActual = new();
+    private bool existeItem = false;
+    private string mensaje = "";
+    private string claseAviso = "alert alert-info";
+    private const string urlBaseApi = "api/archivo";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarUsuarios();
+        await CargarItems();
+    }
+
+    private static string FormatearFecha(DateTime? f) => f?.ToString("yyyy-MM-dd") ?? "";
+
+    private async Task CargarUsuarios()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiUsuarios<List<Usuario>>>("api/usuario");
+        usuarios = resp?.Datos ?? new();
+    }
+
+    private async Task CargarItems()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiArchivo<List<Archivo>>>(urlBaseApi);
+        lista = resp?.Datos ?? new();
+    }
+
+    private async Task CrearOActualizar()
+    {
+        if (existeItem)
+            await ActualizarItem();
+        else
+            await CrearItem();
+    }
+
+    private async Task CrearItem()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdUsuario", itemActual.IdUsuario },
+            { "Ruta", itemActual.Ruta },
+            { "Nombre", itemActual.Nombre },
+            { "Tipo", itemActual.Tipo },
+            { "Fecha", itemActual.Fecha }
+        };
+
+        var resp = await cli.PostAsJsonAsync(urlBaseApi, datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Archivo creado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al crear archivo: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task ActualizarItem()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdUsuario", itemActual.IdUsuario },
+            { "Ruta", itemActual.Ruta },
+            { "Nombre", itemActual.Nombre },
+            { "Tipo", itemActual.Tipo },
+            { "Fecha", itemActual.Fecha }
+        };
+
+        var resp = await cli.PutAsJsonAsync($"{urlBaseApi}/id/{itemActual.Id}", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Archivo actualizado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al actualizar archivo: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task EliminarItem()
+    {
+        if (itemActual.Id <= 0) return;
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"{urlBaseApi}/id/{itemActual.Id}");
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Archivo eliminado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al eliminar archivo: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private void CargarEnFormulario(Archivo it)
+    {
+        itemActual = new Archivo
+        {
+            Id = it.Id,
+            IdUsuario = it.IdUsuario,
+            Ruta = it.Ruta,
+            Nombre = it.Nombre,
+            Tipo = it.Tipo,
+            Fecha = it.Fecha
+        };
+        existeItem = true;
+        mensaje = "Modo edición activo. Presiona 'Actualizar' para guardar los cambios.";
+        claseAviso = "alert alert-warning";
+    }
+
+    private void LimpiarFormulario()
+    {
+        itemActual = new();
+        existeItem = false;
+        mensaje = "";
+    }
+
+    private async Task ProbarConexion()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetAsync(urlBaseApi);
+        mensaje = resp.IsSuccessStatusCode ? "Conexión OK" : "Error de conexión";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+    }
+}

@@ -24,6 +24,14 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/ActividadPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBY3RpdmlkYWRQYWdlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/ArchivoPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBcmNoaXZvUGFnZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/EntregablePage.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFbnRyZWdhYmxlUGFnZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -34,6 +42,22 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/MetaEstrategicaPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNZXRhRXN0cmF0ZWdpY2FQYWdlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/ObjetivoEstrategicoPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xPYmpldGl2b0VzdHJhdGVnaWNvUGFnZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/ProductoPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xQcm9kdWN0b1BhZ2UucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/ProyectoPage.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xQcm95ZWN0b1BhZ2UucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/mlugo/Desktop/ML-Universidad/Aplicaciones y Servicios WEB/Sistema de gestion de Proyectos y Microproyectos/FrontendBlazorApi/Components/Pages/TipoProductoPage.razor]

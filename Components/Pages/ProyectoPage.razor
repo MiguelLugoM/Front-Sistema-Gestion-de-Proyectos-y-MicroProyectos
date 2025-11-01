@@ -1,0 +1,722 @@
+@page "/proyecto"
+
+@using System.Net.Http.Json
+@using FrontendBlazorApi.Models
+@inject IHttpClientFactory fabricaHttp
+@rendermode InteractiveServer
+
+<PageTitle>Proyectos</PageTitle>
+
+<h3>Gestión de Proyectos</h3>
+
+<div class="mb-3 d-flex gap-2">
+    <button class="btn btn-outline-secondary" @onclick="ProbarConexion">Probar conexión</button>
+    <button class="btn btn-outline-primary" @onclick="CargarItems">Mostrar todos</button>
+    <button class="btn btn-outline-dark" @onclick="LimpiarFormulario">Limpiar</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="@claseAviso" role="alert">@mensaje</div>
+}
+
+<EditForm Model="itemActual" OnValidSubmit="CrearOActualizar">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3">
+        <div class="col-md-2">
+            <label>Id</label>
+            <InputNumber class="form-control" @bind-Value="itemActual.Id" disabled />
+        </div>
+
+        <div class="col-md-3">
+            <label>Código</label>
+            <InputText class="form-control" @bind-Value="itemActual.Codigo" />
+        </div>
+
+        <div class="col-md-7">
+            <label>Título</label>
+            <InputText class="form-control" @bind-Value="itemActual.Titulo" />
+        </div>
+
+        <div class="col-12">
+            <label>Descripción</label>
+            <InputTextArea class="form-control" @bind-Value="itemActual.Descripcion" />
+        </div>
+
+        <div class="col-md-4">
+            <label>Tipo de Proyecto</label>
+            <select class="form-select" @bind="itemActual.IdTipoProyecto">
+                <option value="">Seleccione...</option>
+                @foreach (var tipo in tiposProyecto)
+                {
+                    <option value="@tipo.Id">@tipo.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label>Responsable</label>
+            <select class="form-select" @bind="itemActual.IdResponsable">
+                <option value="">Seleccione...</option>
+                @foreach (var r in responsables)
+                {
+                    <option value="@r.Id">@r.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label>Proyecto Padre</label>
+            <select class="form-select" @bind="itemActual.IdProyectoPadre">
+                <option value="">(Ninguno)</option>
+                @foreach (var p in proyectosPadre)
+                {
+                    <option value="@p.Id">@p.Titulo</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>Estado</label>
+            <select class="form-select" @bind="estadoSeleccionado">
+                <option value="">Seleccione...</option>
+                @foreach (var e in estadosDisponibles)
+                {
+                    <option value="@e.Id">@e.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>Fecha inicio</label>
+            <InputDate class="form-control" @bind-Value="itemActual.FechaInicio" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Fecha fin prevista</label>
+            <InputDate class="form-control" @bind-Value="itemActual.FechaFinPrevista" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Fecha finalización</label>
+            <InputDate class="form-control" @bind-Value="itemActual.FechaFinalizacion" />
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            @(existeItem ? "Actualizar" : "Crear")
+        </button>
+        <button class="btn btn-success" @onclick="AsignarEstado" disabled="@(!existeItem)">Asignar Estado</button>
+        <button class="btn btn-danger" @onclick="EliminarItem" disabled="@(!existeItem)">Eliminar</button>
+    </div>
+</EditForm>
+
+<hr />
+
+@if (lista.Count == 0)
+{
+    <p>No hay proyectos registrados.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Responsable</th>
+                <th>Estado</th>
+                <th>Inicio</th>
+                <th>Fin Prevista</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var it in lista)
+            {
+                <tr>
+                    <td>@it.Id</td>
+                    <td>@it.Titulo</td>
+                    <td>@tiposProyecto.FirstOrDefault(t => t.Id == it.IdTipoProyecto)?.Nombre</td>
+                    <td>@responsables.FirstOrDefault(r => r.Id == it.IdResponsable)?.Nombre</td>
+                    <td>@estadosDisponibles.FirstOrDefault(e => e.Id == it.IdEstado)?.Nombre</td>
+                    <td>@FormatearFecha(it.FechaInicio)</td>
+                    <td>@FormatearFecha(it.FechaFinPrevista)</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => CargarEnFormulario(it)">Cargar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (existeItem)
+{
+    <!-- ===================== PRODUCTOS ASOCIADOS ===================== -->
+    <hr />
+    <h5>Productos asociados al proyecto: @itemActual.Titulo</h5>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-8">
+            <select class="form-select" @bind="productoSeleccionado">
+                <option value="">Seleccione producto...</option>
+                @foreach (var p in productosDisponibles)
+                {
+                    <option value="@p.Id">@p.Titulo</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-primary w-100"
+                    @onclick="AsociarProducto"
+                    disabled="@string.IsNullOrEmpty(productoSeleccionado)">
+                Asociar producto
+            </button>
+        </div>
+    </div>
+
+    @if (productosAsociados.Count == 0)
+    {
+        <p>No hay productos asociados a este proyecto.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Título</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in productosAsociados)
+                {
+                    <tr>
+                        <td>@p.Id</td>
+                        <td>@p.Titulo</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => QuitarProducto(p.Id)">
+                                Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- ===================== METAS ASOCIADAS ===================== -->
+    <hr />
+    <h5>Metas estratégicas asociadas al proyecto: @itemActual.Titulo</h5>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-8">
+            <select class="form-select" @bind="metaSeleccionada">
+                <option value="">Seleccione meta...</option>
+                @foreach (var m in metasDisponibles)
+                {
+                    <option value="@m.Id">@m.Titulo</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-success w-100"
+                    @onclick="AsociarMeta"
+                    disabled="@string.IsNullOrEmpty(metaSeleccionada)">
+                Asociar meta
+            </button>
+        </div>
+    </div>
+
+    @if (metasAsociadas.Count == 0)
+    {
+        <p>No hay metas asociadas a este proyecto.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Título</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in metasAsociadas)
+                {
+                    <tr>
+                        <td>@m.Id</td>
+                        <td>@m.Titulo</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => QuitarMeta(m.Id)">
+                                Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+        <!-- ===================== PRESUPUESTOS DEL PROYECTO ===================== -->
+    <hr />
+    <h5>Presupuestos del proyecto: @itemActual.Titulo</h5>
+
+    <EditForm Model="presupuestoActual" OnValidSubmit="CrearOActualizarPresupuesto">
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label>Monto solicitado</label>
+                <InputNumber class="form-control" @bind-Value="presupuestoActual.MontoSolicitado" />
+            </div>
+            <div class="col-md-3">
+                <label>Monto aprobado</label>
+                <InputNumber class="form-control" @bind-Value="presupuestoActual.MontoAprobado" />
+            </div>
+            <div class="col-md-2">
+                <label>Estado</label>
+                <select class="form-select" @bind="presupuestoActual.Estado">
+                    <option>Pendiente</option>
+                    <option>Aprobado</option>
+                    <option>Rechazado</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Año</label>
+                <InputNumber class="form-control" @bind-Value="presupuestoActual.PeriodoAnio" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    @(existePresupuesto ? "Actualizar" : "Agregar")
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+    @if (presupuestos.Count == 0)
+    {
+        <p>No hay presupuestos registrados para este proyecto.</p>
+    }
+    else
+    {
+        @foreach (var p in presupuestos)
+        {
+            <div class="card my-3">
+                <div class="card-header bg-light">
+                    <strong>Presupuesto ID:</strong> @p.Id |
+                    <strong>Estado:</strong> @p.Estado |
+                    <strong>Monto:</strong> @p.MontoSolicitado
+                </div>
+                <div class="card-body">
+                    <h6>Distribución</h6>
+                    <EditForm Model="distribucionActual" OnValidSubmit="() => CrearDistribucion(p.Id)">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label>Proyecto hijo</label>
+                                <select class="form-select" @bind="distribucionActual.IdProyectoHijo">
+                                    <option value="">Seleccione...</option>
+                                    @foreach (var pj in proyectosHijos)
+                                    {
+                                        <option value="@pj.Id">@pj.Titulo</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label>Monto asignado</label>
+                                <InputNumber class="form-control" @bind-Value="distribucionActual.MontoAsignado" />
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-primary w-100">Agregar</button>
+                            </div>
+                        </div>
+                    </EditForm>
+
+                    <h6>Ejecución</h6>
+                    <EditForm Model="ejecucionActual" OnValidSubmit="() => CrearEjecucion(p.Id)">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-2">
+                                <label>Año</label>
+                                <InputNumber class="form-control" @bind-Value="ejecucionActual.Anio" />
+                            </div>
+                            <div class="col-md-3">
+                                <label>Planeado</label>
+                                <InputNumber class="form-control" @bind-Value="ejecucionActual.MontoPlaneado" />
+                            </div>
+                            <div class="col-md-3">
+                                <label>Ejecutado</label>
+                                <InputNumber class="form-control" @bind-Value="ejecucionActual.MontoEjecutado" />
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-success w-100">Agregar</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    }
+
+}
+
+@code {
+    private List<Proyecto> lista = new();
+    private List<TipoProyecto> tiposProyecto = new();
+    private List<Responsable> responsables = new();
+    private List<Proyecto> proyectosPadre = new();
+
+    private Proyecto itemActual = new();
+    private bool existeItem = false;
+    private string mensaje = "";
+    private string claseAviso = "alert alert-info";
+    private const string urlBaseApi = "api/proyecto";
+
+    // === PRODUCTOS ASOCIADOS ===
+    private List<Producto> productosDisponibles = new();
+    private List<Producto> productosAsociados = new();
+    private string? productoSeleccionado;
+
+    // === METAS ASOCIADAS ===
+    private List<MetaEstrategica> metasDisponibles = new();
+    private List<MetaEstrategica> metasAsociadas = new();
+    private string? metaSeleccionada;
+
+    // === ESTADOS ===
+    private List<Estado> estadosDisponibles = new();
+    private string? estadoSeleccionado;
+    // === PRESUPUESTOS ===
+    private List<Presupuesto> presupuestos = new();
+    private Presupuesto presupuestoActual = new();
+    private bool existePresupuesto = false;
+
+    // === DISTRIBUCIÓN Y EJECUCIÓN ===
+    private DistribucionPresupuesto distribucionActual = new();
+    private EjecucionPresupuesto ejecucionActual = new();
+    private List<Proyecto> proyectosHijos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTiposProyecto();
+        await CargarResponsables();
+        await CargarProyectosPadre();
+        await CargarEstados();
+        await CargarMetasDisponibles();
+        await CargarProductosDisponibles();
+        await CargarItems();
+    }
+
+    private static string FormatearFecha(DateTime? f) => f?.ToString("yyyy-MM-dd") ?? "";
+
+    // === CARGAS PRINCIPALES ===
+    private async Task CargarTiposProyecto()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiProyecto<List<TipoProyecto>>>("api/tipoproyecto");
+        tiposProyecto = resp?.Datos ?? new();
+    }
+
+    private async Task CargarResponsables()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiProyecto<List<Responsable>>>("api/responsable");
+        responsables = resp?.Datos ?? new();
+    }
+
+    private async Task CargarProyectosPadre()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiProyecto<List<Proyecto>>>("api/proyecto");
+        proyectosPadre = resp?.Datos ?? new();
+    }
+
+    private async Task CargarEstados()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiEstados<List<Estado>>>("api/estado");
+        estadosDisponibles = resp?.Datos ?? new();
+    }
+
+    private async Task CargarMetasDisponibles()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiMetaEstrategica<List<MetaEstrategica>>>("api/metaestrategica");
+        metasDisponibles = resp?.Datos ?? new();
+    }
+
+    private async Task CargarProductosDisponibles()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiProducto<List<Producto>>>("api/producto");
+        productosDisponibles = resp?.Datos ?? new();
+    }
+
+    // === CRUD PRINCIPAL ===
+    private async Task CargarItems()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiProyecto<List<Proyecto>>>(urlBaseApi);
+        lista = resp?.Datos ?? new();
+    }
+
+    private async Task CrearOActualizar()
+    {
+        if (existeItem)
+            await ActualizarItem();
+        else
+            await CrearItem();
+    }
+
+    private async Task CrearItem()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "Codigo", itemActual.Codigo },
+            { "Titulo", itemActual.Titulo },
+            { "Descripcion", itemActual.Descripcion },
+            { "IdTipoProyecto", itemActual.IdTipoProyecto },
+            { "IdResponsable", itemActual.IdResponsable },
+            { "IdProyectoPadre", itemActual.IdProyectoPadre },
+            { "FechaInicio", itemActual.FechaInicio },
+            { "FechaFinPrevista", itemActual.FechaFinPrevista },
+            { "FechaFinalizacion", itemActual.FechaFinalizacion },
+            { "FechaModificacion", DateTime.Now }
+        };
+
+        var resp = await cli.PostAsJsonAsync(urlBaseApi, datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Proyecto creado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al crear proyecto: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task ActualizarItem()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "Codigo", itemActual.Codigo },
+            { "Titulo", itemActual.Titulo },
+            { "Descripcion", itemActual.Descripcion },
+            { "IdTipoProyecto", itemActual.IdTipoProyecto },
+            { "IdResponsable", itemActual.IdResponsable },
+            { "IdProyectoPadre", itemActual.IdProyectoPadre },
+            { "FechaInicio", itemActual.FechaInicio },
+            { "FechaFinPrevista", itemActual.FechaFinPrevista },
+            { "FechaFinalizacion", itemActual.FechaFinalizacion },
+            { "FechaModificacion", DateTime.Now }
+        };
+
+        var resp = await cli.PutAsJsonAsync($"{urlBaseApi}/id/{itemActual.Id}", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Proyecto actualizado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al actualizar: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task EliminarItem()
+    {
+        if (itemActual.Id <= 0) return;
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"{urlBaseApi}/id/{itemActual.Id}");
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Proyecto eliminado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al eliminar: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    // === ASOCIACIONES ===
+    private async Task AsociarProducto()
+    {
+        if (string.IsNullOrEmpty(productoSeleccionado)) return;
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdProyecto", itemActual.Id },
+            { "IdProducto", int.Parse(productoSeleccionado) },
+            { "FechaAsociacion", DateTime.Now }
+        };
+        var resp = await cli.PostAsJsonAsync("api/proyecto_producto", datos);
+        mensaje = resp.IsSuccessStatusCode ? "Producto asociado correctamente." : "Error al asociar producto.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+    }
+
+    private async Task AsociarMeta()
+    {
+        if (string.IsNullOrEmpty(metaSeleccionada)) return;
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdProyecto", itemActual.Id },
+            { "IdMeta", int.Parse(metaSeleccionada) },
+            { "FechaAsociacion", DateTime.Now }
+        };
+        var resp = await cli.PostAsJsonAsync("api/meta_proyecto", datos);
+        mensaje = resp.IsSuccessStatusCode ? "Meta asociada correctamente." : "Error al asociar meta.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+    }
+
+    private async Task AsignarEstado()
+    {
+        if (string.IsNullOrEmpty(estadoSeleccionado) || itemActual.Id <= 0)
+        {
+            mensaje = "Debe seleccionar un estado válido.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdProyecto", itemActual.Id },
+            { "IdEstado", int.Parse(estadoSeleccionado) }
+        };
+
+        var resp = await cli.PostAsJsonAsync("api/estado_proyecto", datos);
+
+        mensaje = resp.IsSuccessStatusCode ? "Estado asignado correctamente." : "Error al asignar estado.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+    }
+
+    private void CargarEnFormulario(Proyecto it)
+    {
+        itemActual = it;
+        existeItem = true;
+        mensaje = $"Proyecto seleccionado: {it.Titulo}";
+        claseAviso = "alert alert-info";
+    }
+
+    private void LimpiarFormulario()
+    {
+        itemActual = new();
+        existeItem = false;
+        mensaje = "";
+    }
+    private async Task QuitarProducto(int idProducto)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"api/proyecto_producto/idproducto/{idProducto}");
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Producto eliminado del proyecto.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al eliminar producto del proyecto: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+        private async Task QuitarMeta(int idMeta)
+        {
+            var cli = fabricaHttp.CreateClient("ApiProductos");
+            var resp = await cli.DeleteAsync($"api/meta_proyecto/idmeta/{idMeta}");
+
+            if (resp.IsSuccessStatusCode)
+            {
+                mensaje = "Meta eliminada del proyecto.";
+                claseAviso = "alert alert-success";
+                await CargarItems();
+            }
+            else
+            {
+                var detalle = await resp.Content.ReadAsStringAsync();
+                mensaje = $"Error al eliminar meta del proyecto: {detalle}";
+                claseAviso = "alert alert-danger";
+            }
+        }
+            // === PRESUPUESTOS ===
+    private async Task CargarPresupuestos(int idProyecto)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiPresupuesto<List<Presupuesto>>>($"api/presupuesto/idproyecto/{idProyecto}");
+        presupuestos = resp?.Datos ?? new();
+    }
+
+    private async Task CrearOActualizarPresupuesto()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        presupuestoActual.IdProyecto = itemActual.Id;
+        var url = existePresupuesto ? $"api/presupuesto/id/{presupuestoActual.Id}" : "api/presupuesto";
+
+        var resp = existePresupuesto
+            ? await cli.PutAsJsonAsync(url, presupuestoActual)
+            : await cli.PostAsJsonAsync(url, presupuestoActual);
+
+        mensaje = resp.IsSuccessStatusCode ? "Presupuesto guardado correctamente." : "Error al guardar presupuesto.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+
+        await CargarPresupuestos(itemActual.Id);
+        presupuestoActual = new();
+        existePresupuesto = false;
+    }
+
+    private async Task CrearDistribucion(int idPresupuesto)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        distribucionActual.IdPresupuestoPadre = idPresupuesto;
+        var resp = await cli.PostAsJsonAsync("api/distribucionpresupuesto", distribucionActual);
+        mensaje = resp.IsSuccessStatusCode ? "Distribución agregada." : "Error al agregar distribución.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+        distribucionActual = new();
+    }
+
+    private async Task CrearEjecucion(int idPresupuesto)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        ejecucionActual.IdPresupuesto = idPresupuesto;
+        var resp = await cli.PostAsJsonAsync("api/ejecucionpresupuesto", ejecucionActual);
+        mensaje = resp.IsSuccessStatusCode ? "Ejecución agregada." : "Error al agregar ejecución.";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+        ejecucionActual = new();
+    }
+
+    private async Task ProbarConexion()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetAsync(urlBaseApi);
+        mensaje = resp.IsSuccessStatusCode ? "Conexión OK" : "Error de conexión";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
+    }
+}

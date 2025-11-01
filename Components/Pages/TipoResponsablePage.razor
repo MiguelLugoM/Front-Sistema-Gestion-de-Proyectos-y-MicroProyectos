@@ -107,9 +107,86 @@ else
         </tbody>
     </table>
 }
+@if (existeItem)
+{
+    <!-- ===================== RESPONSABLES ASOCIADOS ===================== -->
+    <hr />
+    <h5>Responsables del tipo: @itemActual.Titulo</h5>
+
+    <EditForm Model="responsableActual" OnValidSubmit="CrearOActualizarResponsable">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label>Usuario</label>
+                <select class="form-select" @bind="responsableActual.IdUsuario">
+                    <option value="">Seleccione...</option>
+                    @foreach (var u in usuarios)
+                    {
+                        <option value="@u.Id">@u.Email</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-5">
+                <label>Nombre</label>
+                <InputText class="form-control" @bind-Value="responsableActual.Nombre" />
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    @(existeResponsable ? "Actualizar" : "Agregar")
+                </button>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger w-100" 
+                        @onclick="EliminarResponsable" 
+                        disabled="@(!existeResponsable)">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+    @if (responsablesAsociados.Count == 0)
+    {
+        <p>No hay responsables asociados a este tipo.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in responsablesAsociados)
+                {
+                    <tr>
+                        <td>@r.Id</td>
+                        <td>@usuarios.FirstOrDefault(u => u.Id == r.IdUsuario)?.Email</td>
+                        <td>@r.Nombre</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                    @onclick="() => CargarEnFormularioResponsable(r)">
+                                Cargar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
 
 @code {
-    // Usa el tipo completamente calificado para evitar colisiones
     private List<FrontendBlazorApi.Models.TipoResponsable> lista = new List<FrontendBlazorApi.Models.TipoResponsable>();
 
     [SupplyParameterFromForm]
@@ -124,6 +201,12 @@ else
     private string tituloBusqueda = "";
 
     private const string urlBaseApi = "api/tiporesponsable";
+
+    // === RESPONSABLES ASOCIADOS ===
+    private List<Usuario> usuarios = new();
+    private List<Responsable> responsablesAsociados = new();
+    private Responsable responsableActual = new();
+    private bool existeResponsable = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -359,19 +442,17 @@ else
         }
     }
 
-    private void CargarEnFormulario(FrontendBlazorApi.Models.TipoResponsable it)
+    private async Task CargarEnFormulario(TipoResponsable it)
     {
-        itemActual = new FrontendBlazorApi.Models.TipoResponsable
-        {
-            Id = it.Id,
-            Titulo = it.Titulo,
-            Descripcion = it.Descripcion
-        };
-
+        itemActual = it;
         existeItem = true;
-        mensaje = "Registro seleccionado desde el listado.";
+        mensaje = $"Tipo seleccionado: {it.Titulo}";
         claseAviso = "alert alert-info";
+
+        await CargarResponsablesPorTipo(it.Id);
     }
+
+
 
     private void LimpiarMensajes() { mensaje = ""; claseAviso = "alert alert-info"; }
 
@@ -410,4 +491,109 @@ else
             claseAviso = "alert alert-danger";
         }
     }
+        // === RESPONSABLES ===
+    private async Task CargarUsuarios()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiUsuarios<List<Usuario>>>("api/usuario");
+        usuarios = resp?.Datos ?? new();
+    }
+
+    private async Task CargarResponsablesPorTipo(int idTipo)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiResponsable<List<Responsable>>>("api/responsable");
+        var todos = resp?.Datos ?? new();
+        responsablesAsociados = todos.Where(r => r.IdTipoResponsable == idTipo).ToList();
+    }
+
+
+    private async Task CrearOActualizarResponsable()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+
+        responsableActual.IdTipoResponsable = itemActual.Id;
+
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdTipoResponsable", responsableActual.IdTipoResponsable },
+            { "IdUsuario", responsableActual.IdUsuario },
+            { "Nombre", responsableActual.Nombre }
+        };
+
+        HttpResponseMessage resp;
+
+        if (existeResponsable)
+            resp = await cli.PutAsJsonAsync($"api/responsable/id/{responsableActual.Id}", datos);
+        else
+            resp = await cli.PostAsJsonAsync("api/responsable", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Responsable guardado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarResponsablesPorTipo(itemActual.Id);
+            responsableActual = new();
+            existeResponsable = false;
+        }
+        else
+        {
+            mensaje = "Error al guardar responsable.";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task EliminarResponsable()
+    {
+        if (responsableActual.Id <= 0) return;
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"api/responsable/{responsableActual.Id}");
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Responsable eliminado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarResponsablesPorTipo(itemActual.Id);
+            responsableActual = new();
+            existeResponsable = false;
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+
+            if (detalle.Contains("REFERENCE constraint"))
+            {
+                mensaje = "No se puede eliminar el responsable porque está asociado a entregables u otros registros.";
+            }
+            else
+            {
+                mensaje = $"Error al eliminar responsable: {detalle}";
+            }
+
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+
+    private void CargarEnFormularioResponsable(Responsable it)
+    {
+        responsableActual = new Responsable
+        {
+            Id = it.Id,
+            IdTipoResponsable = it.IdTipoResponsable,
+            IdUsuario = it.IdUsuario,
+            Nombre = it.Nombre
+        };
+        existeResponsable = true;
+        mensaje = "Responsable cargado para edición.";
+        claseAviso = "alert alert-info";
+    }
+
+    private void LimpiarResponsable()
+    {
+        responsableActual = new();
+        existeResponsable = false;
+    }
+
 }

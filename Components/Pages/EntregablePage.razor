@@ -1,7 +1,5 @@
 @page "/entregable"
 
-@using System
-@using System.Linq
 @using System.Net.Http.Json
 @using FrontendBlazorApi.Models
 @inject IHttpClientFactory fabricaHttp
@@ -12,9 +10,9 @@
 <h3>Gestión de Entregables</h3>
 
 <div class="mb-3 d-flex gap-2">
-    <button type="button" class="btn btn-outline-secondary" @onclick="ProbarConexion">Probar conexión</button>
-    <button type="button" class="btn btn-outline-primary" @onclick="CargarItems">Mostrar todos</button>
-    <button type="button" class="btn btn-outline-dark" @onclick="LimpiarFormulario">Limpiar</button>
+    <button class="btn btn-outline-secondary" @onclick="ProbarConexion">Probar conexión</button>
+    <button class="btn btn-outline-primary" @onclick="CargarItems">Mostrar todos</button>
+    <button class="btn btn-outline-dark" @onclick="LimpiarFormulario">Limpiar</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
@@ -22,84 +20,65 @@
     <div class="@claseAviso" role="alert">@mensaje</div>
 }
 
-<h5 class="mt-2">Buscar</h5>
-<div class="row g-2 align-items-end mb-3">
-    <div class="col-md-2">
-        <label class="form-label">Id</label>
-        <InputNumber class="form-control" @bind-Value="idBusqueda" />
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Título</label>
-        <InputText class="form-control" @bind-Value="tituloBusqueda" />
-    </div>
-    <div class="col-md-6 d-flex gap-2">
-        <button type="button" class="btn btn-secondary" @onclick="BuscarPorId">Buscar por Id</button>
-        <button type="button" class="btn btn-secondary" @onclick="BuscarPorTitulo">Buscar por Título</button>
-    </div>
-</div>
-
-<h4>Formulario</h4>
-
-<EditForm Model="itemActual" OnValidSubmit="CrearItem" FormName="EntregableForm">
+<EditForm Model="itemActual" OnValidSubmit="CrearOActualizar">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="row g-3">
         <div class="col-md-2">
-            <label class="form-label">Id</label>
+            <label>Id</label>
             <InputNumber class="form-control" @bind-Value="itemActual.Id" disabled />
         </div>
 
         <div class="col-md-3">
-            <label class="form-label">Código</label>
+            <label>Código</label>
             <InputText class="form-control" @bind-Value="itemActual.Codigo" />
         </div>
 
         <div class="col-md-7">
-            <label class="form-label">Título</label>
+            <label>Título</label>
             <InputText class="form-control" @bind-Value="itemActual.Titulo" />
         </div>
 
         <div class="col-12">
-            <label class="form-label">Descripción</label>
-            <InputText class="form-control" @bind-Value="itemActual.Descripcion" />
+            <label>Descripción</label>
+            <InputTextArea class="form-control" @bind-Value="itemActual.Descripcion" />
         </div>
 
         <div class="col-md-3">
-            <label class="form-label">Fecha inicio</label>
+            <label>Fecha inicio</label>
             <InputDate class="form-control" @bind-Value="itemActual.FechaInicio" />
         </div>
+
         <div class="col-md-3">
-            <label class="form-label">Fecha fin prevista</label>
+            <label>Fecha fin prevista</label>
             <InputDate class="form-control" @bind-Value="itemActual.FechaFinPrevista" />
         </div>
+
         <div class="col-md-3">
-            <label class="form-label">Fecha modificación</label>
-            <!-- Solo lectura: la asigna el sistema -->
+            <label>Fecha modificación</label>
             <input class="form-control" value="@FormatearFecha(itemActual.FechaModificacion)" disabled />
         </div>
+
         <div class="col-md-3">
-            <label class="form-label">Fecha finalización</label>
+            <label>Fecha finalización</label>
             <InputDate class="form-control" @bind-Value="itemActual.FechaFinalizacion" />
         </div>
     </div>
 
-    <div class="mt-3 d-flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-primary">Crear</button>
-        <button type="button" class="btn btn-warning" @onclick="ActualizarItem" disabled="@(!existeItem)">Actualizar</button>
-        <button type="button" class="btn btn-danger" @onclick="EliminarItem" disabled="@(!existeItem)">Eliminar</button>
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            @(existeItem ? "Actualizar" : "Crear")
+        </button>
+        <button class="btn btn-danger" @onclick="EliminarItem" disabled="@(!existeItem)">Eliminar</button>
     </div>
 </EditForm>
 
 <hr />
 
-@if (cargando)
+@if (lista.Count == 0)
 {
-    <p><em>Cargando...</em></p>
-}
-else if (lista.Count == 0)
-{
-    <p>No hay entregables.</p>
+    <p>No hay entregables registrados.</p>
 }
 else
 {
@@ -109,12 +88,10 @@ else
                 <th>Id</th>
                 <th>Código</th>
                 <th>Título</th>
-                <th>Descripción</th>
-                <th>FechaInicio</th>
-                <th>FechaFinPrevista</th>
-                <th>FechaModificacion</th>
-                <th>FechaFinalizacion</th>
-                <th>Acciones</th>
+                <th>Inicio</th>
+                <th>Fin Prevista</th>
+                <th>Finalización</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -124,14 +101,11 @@ else
                     <td>@it.Id</td>
                     <td>@it.Codigo</td>
                     <td>@it.Titulo</td>
-                    <td>@it.Descripcion</td>
                     <td>@FormatearFecha(it.FechaInicio)</td>
                     <td>@FormatearFecha(it.FechaFinPrevista)</td>
-                    <td>@FormatearFecha(it.FechaModificacion)</td>
                     <td>@FormatearFecha(it.FechaFinalizacion)</td>
                     <td>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-primary"
+                        <button class="btn btn-sm btn-outline-primary"
                                 @onclick="() => CargarEnFormulario(it)">
                             Cargar
                         </button>
@@ -142,382 +116,550 @@ else
     </table>
 }
 
+@if (existeItem)
+{
+    <!-- ===================== ARCHIVOS ===================== -->
+    <hr />
+    <h5>Archivos asociados al entregable: @itemActual.Titulo</h5>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-8">
+            <select class="form-select" @bind="archivoSeleccionado">
+                <option value="">Seleccione archivo para asociar...</option>
+                @foreach (var a in archivosDisponibles)
+                {
+                    <option value="@a.Id">@a.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-primary w-100" @onclick="AsociarArchivo" disabled="@string.IsNullOrEmpty(archivoSeleccionado)">
+                Asociar archivo
+            </button>
+        </div>
+    </div>
+
+    @if (archivosAsociados.Count == 0)
+    {
+        <p>No hay archivos asociados a este entregable.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Ruta</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in archivosAsociados)
+                {
+                    <tr>
+                        <td>@a.Id</td>
+                        <td>@a.Nombre</td>
+                        <td>@a.Tipo</td>
+                        <td>@a.Ruta</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => QuitarArchivo(a.Id)">
+                                Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- ===================== ACTIVIDADES ===================== -->
+    <hr />
+    <h5>Actividades del entregable: @itemActual.Titulo</h5>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <label>Título</label>
+            <InputText class="form-control" @bind-Value="actividadActual.Titulo" />
+        </div>
+
+        <div class="col-md-4">
+            <label>Prioridad</label>
+            <InputNumber class="form-control" @bind-Value="actividadActual.Prioridad" />
+        </div>
+
+        <div class="col-md-4">
+            <label>Avance (%)</label>
+            <InputNumber class="form-control" @bind-Value="actividadActual.PorcentajeAvance" />
+        </div>
+
+        <div class="col-md-12">
+            <label>Descripción</label>
+            <InputTextArea class="form-control" @bind-Value="actividadActual.Descripcion" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Inicio</label>
+            <InputDate class="form-control" @bind-Value="actividadActual.FechaInicio" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Fin prevista</label>
+            <InputDate class="form-control" @bind-Value="actividadActual.FechaFinPrevista" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Finalización</label>
+            <InputDate class="form-control" @bind-Value="actividadActual.FechaFinalizacion" />
+        </div>
+
+        <div class="col-md-3">
+            <label> </label>
+            <button class="btn btn-outline-primary w-100" @onclick="AgregarActividad">Agregar actividad</button>
+        </div>
+    </div>
+
+    @if (actividades.Count == 0)
+    {
+        <p>No hay actividades registradas para este entregable.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Inicio</th>
+                    <th>Fin Prevista</th>
+                    <th>Finalización</th>
+                    <th>Prioridad</th>
+                    <th>Avance (%)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in actividades)
+                {
+                    <tr>
+                        <td>@a.Titulo</td>
+                        <td>@FormatearFecha(a.FechaInicio)</td>
+                        <td>@FormatearFecha(a.FechaFinPrevista)</td>
+                        <td>@FormatearFecha(a.FechaFinalizacion)</td>
+                        <td>@a.Prioridad</td>
+                        <td>@a.PorcentajeAvance</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => EliminarActividad(a.Id)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- ===================== RESPONSABLES ===================== -->
+    <hr />
+    <h5>Responsables asociados al entregable: @itemActual.Titulo</h5>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-8">
+            <select class="form-select" @bind="responsableSeleccionado">
+                <option value="">Seleccione responsable...</option>
+                @foreach (var r in responsablesDisponibles)
+                {
+                    <option value="@r.Id">@r.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-primary w-100" @onclick="AsociarResponsable" disabled="@string.IsNullOrEmpty(responsableSeleccionado)">
+                Asociar responsable
+            </button>
+        </div>
+    </div>
+
+    @if (responsablesAsociados.Count == 0)
+    {
+        <p>No hay responsables asociados a este entregable.</p>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Nombre</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in responsablesAsociados)
+                {
+                    <tr>
+                        <td>@r.Id</td>
+                        <td>@r.Nombre</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => QuitarResponsable(r.Id)">
+                                Quitar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
 
 @code {
-    // ---------------- Estado ----------------
-    private List<Entregable> lista = new List<Entregable>();
-
-    [SupplyParameterFromForm]
-    private Entregable itemActual { get; set; } = new Entregable();
-
+    // === ENTREGABLES ===
+    private List<Entregable> lista = new();
+    private Entregable itemActual = new();
     private bool existeItem = false;
     private string mensaje = "";
     private string claseAviso = "alert alert-info";
-    private bool cargando = false;
-
-    // Búsqueda
-    private int? idBusqueda;
-    private string tituloBusqueda = "";
-
     private const string urlBaseApi = "api/entregable";
+
+    // === ARCHIVOS ===
+    private List<Archivo> archivosDisponibles = new();
+    private List<Archivo> archivosAsociados = new();
+    private string? archivoSeleccionado;
+
+    // === ACTIVIDADES ===
+    private List<Actividad> actividades = new();
+    private Actividad actividadActual = new();
+
+    // === RESPONSABLES ===
+    private List<Responsable> responsablesDisponibles = new();
+    private List<Responsable> responsablesAsociados = new();
+    private string? responsableSeleccionado;
 
     protected override async Task OnInitializedAsync()
     {
         await CargarItems();
+        await CargarArchivosDisponibles();
+        await CargarResponsablesDisponibles();
     }
 
-    // --------------- Utilidades ---------------
-    private static string FormatearFecha(DateTime? dt) => dt.HasValue ? dt.Value.ToString("yyyy-MM-dd") : "";
+    private static string FormatearFecha(DateTime? f) => f?.ToString("yyyy-MM-dd") ?? "";
 
-    private bool ValidarFechasParaCrearActualizar()
-    {
-        // Fin prevista >= Inicio (si ambas existen)
-        if (itemActual.FechaInicio.HasValue && itemActual.FechaFinPrevista.HasValue &&
-            itemActual.FechaFinPrevista.Value.Date < itemActual.FechaInicio.Value.Date)
-        {
-            mensaje = "La fecha fin prevista no puede ser anterior a la fecha de inicio.";
-            claseAviso = "alert alert-warning";
-            return false;
-        }
-
-        // Finalización >= Inicio
-        if (itemActual.FechaInicio.HasValue && itemActual.FechaFinalizacion.HasValue &&
-            itemActual.FechaFinalizacion.Value.Date < itemActual.FechaInicio.Value.Date)
-        {
-            mensaje = "La fecha de finalización no puede ser anterior a la fecha de inicio.";
-            claseAviso = "alert alert-warning";
-            return false;
-        }
-
-        // Finalización >= Fin prevista (si ambas existen)
-        if (itemActual.FechaFinPrevista.HasValue && itemActual.FechaFinalizacion.HasValue &&
-            itemActual.FechaFinalizacion.Value.Date < itemActual.FechaFinPrevista.Value.Date)
-        {
-            mensaje = "La fecha de finalización no puede ser anterior a la fecha fin prevista.";
-            claseAviso = "alert alert-warning";
-            return false;
-        }
-
-        return true;
-    }
-
-    private void LimpiarMensajes() { mensaje = ""; claseAviso = "alert alert-info"; }
-
-    private void LimpiarFormulario()
-    {
-        itemActual = new Entregable();
-        existeItem = false;
-        idBusqueda = null;
-        tituloBusqueda = "";
-        LimpiarMensajes();
-    }
-
-    // --------------- CRUDL ---------------
+    // === CRUD Entregables ===
     private async Task CargarItems()
     {
-        try
-        {
-            cargando = true;
-            var cliente = fabricaHttp.CreateClient("ApiProductos");
-            var resp = await cliente.GetFromJsonAsync<RespuestaApiEntregable<List<Entregable>>>(urlBaseApi);
-            lista = resp?.Datos ?? new List<Entregable>();
-            mensaje = $"Se cargaron {lista.Count} entregable(s).";
-            claseAviso = "alert alert-success";
-        }
-        catch (Exception ex)
-        {
-            mensaje = $"Error al listar: {ex.Message}";
-            claseAviso = "alert alert-danger";
-        }
-        finally { cargando = false; }
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiEntregable<List<Entregable>>>(urlBaseApi);
+        lista = resp?.Datos ?? new();
     }
 
-    private async Task BuscarPorId()
+    private async Task CrearOActualizar()
     {
-        LimpiarMensajes();
-
-        if (idBusqueda is null || idBusqueda <= 0)
-        {
-            mensaje = "Debe indicar un Id válido para buscar.";
-            claseAviso = "alert alert-warning";
-            return;
-        }
-
-        try
-        {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
-            var ruta = $"{urlBaseApi}/id/{idBusqueda}";
-            var resp = await cli.GetFromJsonAsync<RespuestaApiEntregable<List<Entregable>>>(ruta);
-            var encontrado = resp?.Datos?.FirstOrDefault();
-
-            if (encontrado != null)
-            {
-                itemActual = new Entregable
-                {
-                    Id = encontrado.Id,
-                    Codigo = encontrado.Codigo,
-                    Titulo = encontrado.Titulo,
-                    Descripcion = encontrado.Descripcion,
-                    FechaInicio = encontrado.FechaInicio,
-                    FechaFinPrevista = encontrado.FechaFinPrevista,
-                    FechaModificacion = encontrado.FechaModificacion,
-                    FechaFinalizacion = encontrado.FechaFinalizacion
-                };
-                existeItem = true;
-                mensaje = "Entregable cargado. Usa 'Actualizar' para guardar cambios.";
-                claseAviso = "alert alert-info";
-            }
-            else
-            {
-                existeItem = false;
-                mensaje = "No encontrado.";
-                claseAviso = "alert alert-warning";
-            }
-        }
-        catch (Exception ex)
-        {
-            existeItem = false;
-            mensaje = $"Error al buscar: {ex.Message}";
-            claseAviso = "alert alert-danger";
-        }
-        finally
-        {
-            idBusqueda = null;
-            tituloBusqueda = "";
-        }
-    }
-
-    private async Task BuscarPorTitulo()
-    {
-        LimpiarMensajes();
-
-        if (string.IsNullOrWhiteSpace(tituloBusqueda))
-        {
-            mensaje = "Debe indicar el Título para buscar.";
-            claseAviso = "alert alert-warning";
-            return;
-        }
-
-        try
-        {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
-            var ruta = $"{urlBaseApi}/titulo/{tituloBusqueda}";
-            var resp = await cli.GetFromJsonAsync<RespuestaApiEntregable<List<Entregable>>>(ruta);
-            var encontrado = resp?.Datos?.FirstOrDefault();
-
-            if (encontrado != null)
-            {
-                itemActual = new Entregable
-                {
-                    Id = encontrado.Id,
-                    Codigo = encontrado.Codigo,
-                    Titulo = encontrado.Titulo,
-                    Descripcion = encontrado.Descripcion,
-                    FechaInicio = encontrado.FechaInicio,
-                    FechaFinPrevista = encontrado.FechaFinPrevista,
-                    FechaModificacion = encontrado.FechaModificacion,
-                    FechaFinalizacion = encontrado.FechaFinalizacion
-                };
-                existeItem = true;
-                mensaje = "Entregable cargado. Usa 'Actualizar' para guardar cambios.";
-                claseAviso = "alert alert-info";
-            }
-            else
-            {
-                existeItem = false;
-                mensaje = "No encontrado.";
-                claseAviso = "alert alert-warning";
-            }
-        }
-        catch (Exception ex)
-        {
-            existeItem = false;
-            mensaje = $"Error al buscar: {ex.Message}";
-            claseAviso = "alert alert-danger";
-        }
-        finally
-        {
-            idBusqueda = null;
-            tituloBusqueda = "";
-        }
+        if (existeItem)
+            await ActualizarItem();
+        else
+            await CrearItem();
     }
 
     private async Task CrearItem()
     {
-        LimpiarMensajes();
-
-        if (!ValidarFechasParaCrearActualizar())
-            return;
-
-        try
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
         {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
+            { "Codigo", itemActual.Codigo },
+            { "Titulo", itemActual.Titulo },
+            { "Descripcion", itemActual.Descripcion },
+            { "FechaInicio", itemActual.FechaInicio },
+            { "FechaFinPrevista", itemActual.FechaFinPrevista },
+            { "FechaFinalizacion", itemActual.FechaFinalizacion },
+            { "FechaModificacion", DateTime.Now }
+        };
+        var resp = await cli.PostAsJsonAsync(urlBaseApi, datos);
 
-            itemActual.Id = 0;                         // identity
-            itemActual.FechaModificacion = DateTime.Now; // SIEMPRE por sistema
-
-            var resp = await cli.PostAsJsonAsync(urlBaseApi, itemActual);
-
-            if (resp.IsSuccessStatusCode)
-            {
-                mensaje = "Entregable creado correctamente.";
-                claseAviso = "alert alert-success";
-                await CargarItems();
-                LimpiarFormulario();
-            }
-            else
-            {
-                var det = await resp.Content.ReadAsStringAsync();
-                mensaje = $"No se pudo crear. Detalle: {det}";
-                claseAviso = "alert alert-danger";
-            }
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Entregable creado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
         }
-        catch (Exception ex)
+        else
         {
-            mensaje = $"Error al crear: {ex.Message}";
+            mensaje = "Error al crear entregable.";
             claseAviso = "alert alert-danger";
         }
     }
 
     private async Task ActualizarItem()
     {
-        LimpiarMensajes();
-
-        if (itemActual.Id <= 0)
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = "Id inválido para actualizar.";
-            claseAviso = "alert alert-warning";
-            return;
+            { "Codigo", itemActual.Codigo },
+            { "Titulo", itemActual.Titulo },
+            { "Descripcion", itemActual.Descripcion },
+            { "FechaInicio", itemActual.FechaInicio },
+            { "FechaFinPrevista", itemActual.FechaFinPrevista },
+            { "FechaFinalizacion", itemActual.FechaFinalizacion },
+            { "FechaModificacion", DateTime.Now }
+        };
+        var resp = await cli.PutAsJsonAsync($"{urlBaseApi}/id/{itemActual.Id}", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Entregable actualizado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
         }
-
-        if (!ValidarFechasParaCrearActualizar())
-            return;
-
-        try
+        else
         {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
-
-            // Fecha de modificación SIEMPRE por sistema
-            var fechaMod = DateTime.Now;
-
-            var dto = new
-            {
-                codigo = itemActual.Codigo,
-                titulo = itemActual.Titulo,
-                descripcion = itemActual.Descripcion,
-                fechaInicio = itemActual.FechaInicio,
-                fechaFinPrevista = itemActual.FechaFinPrevista,
-                fechaModificacion = fechaMod,
-                fechaFinalizacion = itemActual.FechaFinalizacion
-            };
-
-            var ruta = $"{urlBaseApi}/id/{itemActual.Id}";
-            var resp = await cli.PutAsJsonAsync(ruta, dto);
-
-            if (resp.IsSuccessStatusCode)
-            {
-                mensaje = "Entregable actualizado correctamente.";
-                claseAviso = "alert alert-success";
-                await CargarItems();
-
-                // Limpia el formulario tras actualizar
-                LimpiarFormulario();
-            }
-            else
-            {
-                var det = await resp.Content.ReadAsStringAsync();
-                mensaje = $"No se pudo actualizar. Detalle: {det}";
-                claseAviso = "alert alert-danger";
-            }
-        }
-        catch (Exception ex)
-        {
-            mensaje = $"Error al actualizar: {ex.Message}";
+            mensaje = "Error al actualizar entregable.";
             claseAviso = "alert alert-danger";
         }
     }
 
     private async Task EliminarItem()
     {
-        LimpiarMensajes();
+        if (itemActual.Id <= 0) return;
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"{urlBaseApi}/id/{itemActual.Id}");
 
-        if (itemActual.Id <= 0)
+        if (resp.IsSuccessStatusCode)
         {
-            mensaje = "Id inválido para eliminar.";
-            claseAviso = "alert alert-warning";
-            return;
+            mensaje = "Entregable eliminado correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarItems();
+            LimpiarFormulario();
         }
-
-        try
+        else
         {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
-            var ruta = $"{urlBaseApi}/id/{itemActual.Id}";
-            var resp = await cli.DeleteAsync(ruta);
-
-            if (resp.IsSuccessStatusCode)
-            {
-                mensaje = "Entregable eliminado correctamente.";
-                claseAviso = "alert alert-success";
-                await CargarItems();
-                LimpiarFormulario();
-            }
-            else
-            {
-                var det = await resp.Content.ReadAsStringAsync();
-                mensaje = $"No se pudo eliminar. Detalle: {det}";
-                claseAviso = "alert alert-danger";
-            }
-        }
-        catch (Exception ex)
-        {
-            mensaje = $"Error al eliminar: {ex.Message}";
+            mensaje = "Error al eliminar entregable.";
             claseAviso = "alert alert-danger";
         }
     }
 
     private void CargarEnFormulario(Entregable it)
     {
-        itemActual = new Entregable
-        {
-            Id = it.Id,
-            Codigo = it.Codigo,
-            Titulo = it.Titulo,
-            Descripcion = it.Descripcion,
-            FechaInicio = it.FechaInicio,
-            FechaFinPrevista = it.FechaFinPrevista,
-            FechaModificacion = it.FechaModificacion,
-            FechaFinalizacion = it.FechaFinalizacion
-        };
-
+        itemActual = it;
         existeItem = true;
-        mensaje = "Entregable seleccionado desde el listado.";
+        mensaje = $"Entregable seleccionado: {it.Titulo}";
         claseAviso = "alert alert-info";
+        _ = CargarArchivosAsociados(it.Id);
+        _ = CargarActividades();
+        _ = CargarResponsablesDisponibles();
+        _ = CargarResponsablesAsociados(it.Id);
     }
 
-    private async Task ProbarConexion()
+    private void LimpiarFormulario()
     {
-        LimpiarMensajes();
+        itemActual = new();
+        existeItem = false;
+        archivosAsociados.Clear();
+        actividades.Clear();
+        responsablesAsociados.Clear();
+        mensaje = "";
+    }
 
-        try
+    // === ARCHIVOS ASOCIADOS ===
+    private async Task CargarArchivosDisponibles()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiArchivo<List<Archivo>>>("api/archivo");
+        archivosDisponibles = resp?.Datos ?? new();
+    }
+
+    private async Task CargarArchivosAsociados(int idEntregable)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiArchivoEntregable<List<Archivo_Entregable>>>($"api/archivo_entregable/identregable/{idEntregable}");
+        if (resp?.Datos != null)
         {
-            var cli = fabricaHttp.CreateClient("ApiProductos");
-            var r = await cli.GetAsync(urlBaseApi);
-
-            if (r.IsSuccessStatusCode)
-            {
-                mensaje = "Conexión con la API verificada.";
-                claseAviso = "alert alert-success";
-            }
-            else
-            {
-                mensaje = $"La API respondió con estado {(int)r.StatusCode}.";
-                claseAviso = "alert alert-warning";
-            }
+            var asociaciones = resp.Datos;
+            archivosAsociados = archivosDisponibles.Where(a => asociaciones.Any(x => x.IdArchivo == a.Id)).ToList();
         }
-        catch (Exception ex)
+        else archivosAsociados.Clear();
+    }
+
+    private async Task AsociarArchivo()
+    {
+        if (string.IsNullOrEmpty(archivoSeleccionado)) return;
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
         {
-            mensaje = $"Error de conexión a la API: {ex.Message}";
+            { "IdArchivo", int.Parse(archivoSeleccionado) },
+            { "IdEntregable", itemActual.Id }
+        };
+        var resp = await cli.PostAsJsonAsync("api/archivo_entregable", datos);
+        if (resp.IsSuccessStatusCode)
+        {
+            await CargarArchivosAsociados(itemActual.Id);
+            mensaje = "Archivo asociado correctamente.";
+            claseAviso = "alert alert-success";
+        }
+        else
+        {
+            mensaje = "Error al asociar archivo.";
             claseAviso = "alert alert-danger";
         }
+    }
+
+    private async Task QuitarArchivo(int idArchivo)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"api/archivo_entregable/idarchivo/{idArchivo}");
+        if (resp.IsSuccessStatusCode)
+        {
+            await CargarArchivosAsociados(itemActual.Id);
+            mensaje = "Archivo eliminado del entregable.";
+            claseAviso = "alert alert-success";
+        }
+        else
+        {
+            mensaje = "Error al eliminar relación archivo-entregable.";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    // === ACTIVIDADES ===
+    private async Task CargarActividades()
+    {
+        if (itemActual.Id <= 0) return;
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiActividad<List<Actividad>>>($"api/actividad/identregable/{itemActual.Id}");
+        actividades = resp?.Datos ?? new();
+    }
+
+    private async Task AgregarActividad()
+    {
+        if (itemActual.Id <= 0)
+        {
+            mensaje = "Debe seleccionar un entregable antes de agregar una actividad.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(actividadActual.Titulo))
+        {
+            mensaje = "El título de la actividad es obligatorio.";
+            claseAviso = "alert alert-warning";
+            return;
+        }
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdEntregable", itemActual.Id },
+            { "Titulo", actividadActual.Titulo },
+            { "Descripcion", actividadActual.Descripcion },
+            { "FechaInicio", actividadActual.FechaInicio },
+            { "FechaFinPrevista", actividadActual.FechaFinPrevista },
+            { "FechaFinalizacion", actividadActual.FechaFinalizacion },
+            { "Prioridad", actividadActual.Prioridad },
+            { "PorcentajeAvance", actividadActual.PorcentajeAvance },
+            { "FechaModificacion", DateTime.Now }
+        };
+        var resp = await cli.PostAsJsonAsync("api/actividad", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Actividad agregada correctamente.";
+            claseAviso = "alert alert-success";
+            actividadActual = new();
+            await CargarActividades();
+        }
+        else
+        {
+            var detalle = await resp.Content.ReadAsStringAsync();
+            mensaje = $"Error al agregar actividad: {detalle}";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task EliminarActividad(int idActividad)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"api/actividad/id/{idActividad}");
+        if (resp.IsSuccessStatusCode)
+        {
+            mensaje = "Actividad eliminada correctamente.";
+            claseAviso = "alert alert-success";
+            await CargarActividades();
+        }
+        else
+        {
+            mensaje = "Error al eliminar actividad.";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    // === RESPONSABLES ===
+    private async Task CargarResponsablesDisponibles()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiResponsable<List<Responsable>>>("api/responsable");
+        responsablesDisponibles = resp?.Datos ?? new();
+    }
+
+    private async Task CargarResponsablesAsociados(int idEntregable)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetFromJsonAsync<RespuestaApiResponsableEntregable<List<Responsable_Entregable>>>($"api/responsable_entregable/identregable/{idEntregable}");
+        if (resp?.Datos != null)
+        {
+            var asociaciones = resp.Datos;
+            responsablesAsociados = responsablesDisponibles
+                .Where(r => asociaciones.Any(x => x.IdResponsable == r.Id))
+                .ToList();
+        }
+        else responsablesAsociados.Clear();
+    }
+
+    private async Task AsociarResponsable()
+    {
+        if (string.IsNullOrEmpty(responsableSeleccionado)) return;
+
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var datos = new Dictionary<string, object?>
+        {
+            { "IdResponsable", int.Parse(responsableSeleccionado) },
+            { "IdEntregable", itemActual.Id },
+            { "FechaAsociacion", DateTime.Now }
+        };
+        var resp = await cli.PostAsJsonAsync("api/responsable_entregable", datos);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            await CargarResponsablesAsociados(itemActual.Id);
+            mensaje = "Responsable asociado correctamente.";
+            claseAviso = "alert alert-success";
+        }
+        else
+        {
+            mensaje = "Error al asociar responsable.";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    private async Task QuitarResponsable(int idResponsable)
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.DeleteAsync($"api/responsable_entregable/idresponsable/{idResponsable}");
+        if (resp.IsSuccessStatusCode)
+        {
+            await CargarResponsablesAsociados(itemActual.Id);
+            mensaje = "Responsable eliminado del entregable.";
+            claseAviso = "alert alert-success";
+        }
+        else
+        {
+            mensaje = "Error al eliminar relación responsable-entregable.";
+            claseAviso = "alert alert-danger";
+        }
+    }
+
+    // === OTROS ===
+    private async Task ProbarConexion()
+    {
+        var cli = fabricaHttp.CreateClient("ApiProductos");
+        var resp = await cli.GetAsync(urlBaseApi);
+        mensaje = resp.IsSuccessStatusCode ? "Conexión OK" : "Error de conexión";
+        claseAviso = resp.IsSuccessStatusCode ? "alert alert-success" : "alert alert-danger";
     }
 }
